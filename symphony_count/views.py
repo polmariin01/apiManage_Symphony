@@ -17,6 +17,29 @@ class Symphony_ListView(generics.ListCreateAPIView):
     serializer_class = Symphony_Serializer
 
 
+def create_composer(pk, count= 0):
+    # Si no existeix a la taula, crida a la API on hi ha les dades i extreu el nom del compositor amb aquella id
+    # Crea una nova instancia a la base de dades, amb la id, el nom corresponent i 1 interacció
+
+    # Calls the original api to know the name of the composer
+    try:
+        url = f'https://api.openopus.org/composer/list/ids/{pk}.json'
+        response = requests.get(url)
+        print(response)
+        if response.status_code == 200:
+            data = response.json()
+            name = data['composers'][0]['complete_name'] 
+    except:
+        name = f'Object {pk}'
+    
+#        model = Symphony_Counting_Model(id = id, countedInteractions = 1, name=f"Object {id}", isTrending = False)
+    model = Symphony_Counting_Model(id = pk, countedInteractions = count, name = name, isTrending = False)
+
+    model.save()
+
+    return Symphony_Serializer(model)
+
+
 @api_view(['POST'])
 def count_interaction(request, pk):
     # curl -X POST http://localhost:8000/composer/12/count/
@@ -24,26 +47,7 @@ def count_interaction(request, pk):
         # Si existeix a la taula, actualitza el valor de clicks
         model = Symphony_Counting_Model.objects.get(pk=pk)
     except Symphony_Counting_Model.DoesNotExist:
-        # Si no existeix a la taula, crida a la API on hi ha les dades i extreu el nom del compositor amb aquella id
-        # Crea una nova instancia a la base de dades, amb la id, el nom corresponent i 1 interacció
-
-        # Calls the original api to know the name of the composer
-        try:
-            url = f'https://api.openopus.org/composer/list/ids/{pk}.json'
-            response = requests.get(url)
-            print(response)
-            if response.status_code == 200:
-                data = response.json()
-                name = data['composers'][0]['complete_name'] 
-        except:
-            name = f'Object {pk}'
-
-#        model = Symphony_Counting_Model(id = id, countedInteractions = 1, name=f"Object {id}", isTrending = False)
-        model = Symphony_Counting_Model(id = pk, countedInteractions = 1, name = name, isTrending = False)
-
-        model.save()
-
-        serializer = Symphony_Serializer(model)
+        serializer = create_composer(pk, count=1)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     except:
@@ -61,8 +65,11 @@ def count_interaction(request, pk):
 def get_interactions(request, pk):
     try:
         model = Symphony_Counting_Model.objects.get(pk=pk)
+    except Symphony_Counting_Model.DoesNotExist:
+        serializer = create_composer(pk)
+        return Response(serializer.data, status=status.HTTP_201_CREATED) 
     except:
-        return Response({'error': 'Object not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Object not found & not possible to create'}, status=status.HTTP_404_NOT_FOUND)
     
     serializer = Symphony_Serializer(model)
     return Response(serializer.data, status=status.HTTP_200_OK)

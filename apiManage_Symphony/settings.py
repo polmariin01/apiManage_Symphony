@@ -55,6 +55,8 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",  # Origin of your Angular app
+    "http://localhost:3000",        # Deployed accessing local host using lite-server
+    "http://172.19.194.215:3000",   # Deployed external accesWS
 ]
 
 CORS_ALLOW_HEADERS = [
